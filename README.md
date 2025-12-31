@@ -1,10 +1,16 @@
+<p align="center">
+  <img src="assets/logo.png" width="800" alt="Flutoryx Uploader Logo">
+</p>
+
 # Flutoryx Uploader 🚀
 
 A battle-tested Flutter plugin for **resumable, chunked, background-safe file uploads**. 
 Designed for high-performance apps that need to handle large file transfers reliably across Android (WorkManager) and iOS (Background URLSession).
 
-[![Pub Version](https://img.shields.io/pub/v/flutoryx_uploader)](https://pub.dev/packages/flutoryx_uploader)
-[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://pub.dev/packages/flutoryx_uploader"><img src="https://img.shields.io/pub/v/flutoryx_uploader" alt="Pub Version"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-purple.svg" alt="License: MIT"></a>
+</p>
 
 ---
 
