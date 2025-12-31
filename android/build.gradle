@@ -1,0 +1,89 @@
+group = "com.example.flutoryx_uploader"
+version = "1.0-SNAPSHOT"
+
+buildscript {
+    ext.kotlin_version = "1.9.24"
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.11.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+apply plugin: "kotlin-kapt"
+
+android {
+    namespace = "com.example.flutoryx_uploader"
+
+    compileSdk = 34
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+        test.java.srcDirs += "src/test/kotlin"
+    }
+
+    defaultConfig {
+        minSdk = 24
+    }
+
+    dependencies {
+        testImplementation("org.jetbrains.kotlin:kotlin-test")
+        testImplementation("org.mockito:mockito-core:5.0.0")
+
+        // WorkManager
+        implementation "androidx.work:work-runtime-ktx:2.8.1"
+        
+        // Room
+        implementation "androidx.room:room-runtime:2.5.2"
+        implementation "androidx.room:room-ktx:2.5.2"
+        
+        // OkHttp
+        implementation "com.squareup.okhttp3:okhttp:4.11.0"
+        
+        // Gson
+        implementation "com.google.code.gson:gson:2.10.1"
+        
+        // Coroutines
+        implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+        
+        kapt "androidx.room:room-compiler:2.5.2"
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+
+            testLogging {
+               events "passed", "skipped", "failed", "standardOut", "standardError"
+               outputs.upToDateWhen {false}
+               showStandardStreams = true
+            }
+        }
+    }
+}
+
+kapt {
+    correctErrorTypes = true
+}
