@@ -94,4 +94,4 @@ final tasks = await uploader.getTasks();
 ---
 
 ## License 📄
-MIT License - Developed with ❤️ by SPG-9900.
+MIT License - Developed with by SPG-9900.
