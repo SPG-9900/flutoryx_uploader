@@ -199,8 +199,9 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   String _formatSpeed(double bytesPerSecond) {
-    if (bytesPerSecond < 1024)
+    if (bytesPerSecond < 1024) {
       return "${bytesPerSecond.toStringAsFixed(1)} B/s";
+    }
     if (bytesPerSecond < 1024 * 1024) {
       return "${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s";
     }
