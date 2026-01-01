@@ -90,7 +90,7 @@ final tasks = await uploader.getTasks();
 
 ## Comparison 📊
 
-| Feature | Flutoryx Uploader | standard_uploader |
+| Feature | Flutoryx Uploader | Standard HTTP Upload |
 |---------|-------------------|-------------------|
 | Chunked Packets | ✅ (Native Slicing) | ❌ (Raw Multi-part) |
 | Speed & ETA | ✅ Built-in | ❌ Manual Logic |

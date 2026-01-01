@@ -1,3 +1,7 @@
+## 1.0.1
+
+* Documentation update: Clarified comparison table in README.md.
+
 ## 1.0.0
 
 * Initial release of the Flutoryx Uploader plugin.
