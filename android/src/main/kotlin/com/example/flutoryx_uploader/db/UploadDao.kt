@@ -26,8 +26,8 @@ interface UploadDao {
     @Query("UPDATE upload_tasks SET status = :status WHERE taskId = :taskId")
     fun updateStatus(taskId: String, status: String)
 
-    @Query("UPDATE upload_tasks SET progress = :progress WHERE taskId = :taskId")
-    fun updateProgress(taskId: String, progress: Int)
+    @Query("UPDATE upload_tasks SET progress = :progress, speed = :speed, eta = :eta WHERE taskId = :taskId")
+    fun updateTaskProgress(taskId: String, progress: Int, speed: Double, eta: Long?)
     
     @Query("DELETE FROM upload_tasks WHERE taskId = :taskId")
     fun delete(taskId: String)

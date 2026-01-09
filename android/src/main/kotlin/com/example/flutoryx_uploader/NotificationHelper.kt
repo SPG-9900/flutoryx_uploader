@@ -67,6 +67,12 @@ class NotificationHelper(private val context: Context) {
             .build()
     }
 
+    fun updateProgressNotification(taskId: String, progress: Int, fileName: String, speed: Double = 0.0, eta: Long? = null) {
+        val notification = buildProgressNotification(taskId, progress, fileName, speed, eta)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(taskId.hashCode(), notification)
+    }
+
     private fun _formatSpeed(bytesPerSecond: Double): String {
         return when {
             bytesPerSecond < 1024 -> "%.1f B/s".format(bytesPerSecond)

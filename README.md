@@ -19,7 +19,8 @@ Designed for high-performance apps that need to handle large file transfers reli
 Standard upload plugins often fail when the app is killed or the network blinks. **Flutoryx Uploader** is built as a robust transport engine that treats every file as a series of reliable packets.
 
 ### Key Features 🌟
-- **📦 Chunked Uploads**: Slices large files into 1MB (configurable) packets.
+- **🚀 Hybrid Upload Engine**: Choose between **Direct** (Standard Multipart) or **Chunked** (Resumable) modes.
+- **📦 Chunked Uploads**: Slices large files into configurable packets (e.g., 1MB).
 - **🔄 Smart Resumption**: If a chunk fails at 99%, only that specific 1MB chunk retries, not the whole file. 
 - **📈 Real-time Metrics**: Built-in Speed tracking (e.g., `1.4 MB/s`) and ETA estimation (`Remaining: 1m 30s`).
 - **🛡️ Resilience**: Automatically reconnects background sessions and resumes tasks after an app kill or device reboot.
@@ -62,7 +63,8 @@ final taskId = await uploader.uploadFile(
   endpoint: 'https://api.yoursite.com/upload',
   headers: {"Authorization": "Bearer YOUR_TOKEN"},
   config: UploadConfig(
-    chunkSize: 1024 * 1024, // 1MB default
+    uploadMode: UploadMode.direct, // or UploadMode.chunked
+    chunkSize: 1024 * 1024, // Used if chunked
     showNotification: true,
   ),
 );

@@ -86,6 +86,8 @@ public class FlutoryxUploaderPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
       let maxParallel = config["maxParallelUploads"] as? Int ?? 2
       let adaptive = config["adaptiveNetwork"] as? Bool ?? true
       let showNotification = config["showNotification"] as? Bool ?? true
+      let uploadModeStr = config["uploadMode"] as? String ?? "direct"
+      let uploadMode = UploadMode(rawValue: uploadModeStr) ?? .direct
       
       let headers = args["headers"] as? [String: String]
       let data = args["data"] as? [String: String]
@@ -105,7 +107,8 @@ public class FlutoryxUploaderPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         uploadedChunkIndices: [],
         startTime: Date(),
         speed: 0,
-        eta: nil
+        eta: nil,
+        uploadMode: uploadMode
       )
       
       PersistenceManager.shared.addTask(task)
@@ -129,6 +132,8 @@ public class FlutoryxUploaderPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
       let maxParallel = config["maxParallelUploads"] as? Int ?? 2
       let adaptive = config["adaptiveNetwork"] as? Bool ?? true
       let showNotification = config["showNotification"] as? Bool ?? true
+      let uploadModeStr = config["uploadMode"] as? String ?? "direct"
+      let uploadMode = UploadMode(rawValue: uploadModeStr) ?? .direct
       
       let headers = args["headers"] as? [String: String]
       let data = args["data"] as? [String: String]
@@ -152,7 +157,8 @@ public class FlutoryxUploaderPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
                 uploadedChunkIndices: [],
                 startTime: Date(),
                 speed: 0,
-                eta: nil
+                eta: nil,
+                uploadMode: uploadMode
               )
            PersistenceManager.shared.addTask(task)
            UploadManager.shared.startUpload(taskId: taskId)

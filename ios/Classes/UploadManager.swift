@@ -51,7 +51,89 @@ class UploadManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     
     func startUpload(taskId: String) {
         PersistenceManager.shared.updateTaskStatus(taskId: taskId, status: .running)
-        nextChunk(taskId: taskId)
+        guard let task = PersistenceManager.shared.getTask(taskId: taskId) else { return }
+        
+        if task.uploadMode == .chunked {
+            nextChunk(taskId: taskId)
+        } else {
+            startDirectUpload(taskId: taskId)
+        }
+    }
+    
+    private func startDirectUpload(taskId: String) {
+        queue.async {
+            guard let task = PersistenceManager.shared.getTask(taskId: taskId) else { return }
+            
+            // 1. Create Multipart Body File
+            let tempDir = FileManager.default.temporaryDirectory
+            let bodyFile = tempDir.appendingPathComponent("\(taskId)_body")
+            
+            let boundary = "Boundary-\(UUID().uuidString)"
+            var request = URLRequest(url: URL(string: task.endpoint)!)
+            request.httpMethod = "POST"
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            
+            if let headers = task.headers {
+                for (k, v) in headers {
+                    request.setValue(v, forHTTPHeaderField: k)
+                }
+            }
+            
+            do {
+                 var bodyData = Data()
+                
+                 // Data fields
+                 if let dataMap = task.data {
+                     for (k, v) in dataMap {
+                         bodyData.append("--\(boundary)\r\n".data(using: .utf8)!)
+                         bodyData.append("Content-Disposition: form-data; name=\"\(k)\"\r\n\r\n".data(using: .utf8)!)
+                         bodyData.append("\(v)\r\n".data(using: .utf8)!)
+                     }
+                 }
+                
+                // File field
+                let fileURL = URL(fileURLWithPath: task.filePath)
+                let filename = fileURL.lastPathComponent
+                let mimeType = "application/octet-stream"
+                
+                bodyData.append("--\(boundary)\r\n".data(using: .utf8)!)
+                bodyData.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+                bodyData.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+                
+                // Write initial part to file
+                try bodyData.write(to: bodyFile)
+                
+                // Append file content
+                let fileHandle = try FileHandle(forWritingTo: bodyFile)
+                fileHandle.seekToEndOfFile()
+                
+                let sourceHandle = try FileHandle(forReadingFrom: fileURL)
+                // Stream read/write to avoid memory issues for large files?
+                // FileManager copy is better if possible but we need to prepend/append data.
+                // For simplicity reading wholly? No, large files crash.
+                // Read in chunks.
+                let bufferSize = 1024 * 1024
+                while true {
+                    let data = sourceHandle.readData(ofLength: bufferSize)
+                    if data.isEmpty { break }
+                    fileHandle.write(data)
+                }
+                
+                sourceHandle.closeFile()
+                
+                // Closing boundary
+                fileHandle.write("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+                fileHandle.closeFile()
+                
+                // Start Upload Task
+                let uploadTask = self.session.uploadTask(with: request, fromFile: bodyFile)
+                uploadTask.taskDescription = "\(taskId)|direct"
+                uploadTask.resume()
+                
+            } catch {
+                self.failTask(taskId: taskId, message: error.localizedDescription)
+            }
+        }
     }
     
     func cancelUpload(taskId: String) {
@@ -195,13 +277,70 @@ class UploadManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     
     // MARK: - Delegate Methods
     
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        guard let description = task.taskDescription else { return }
+        let parts = description.split(separator: "|")
+        if parts.count != 2 { return }
+        
+        let taskId = String(parts[0])
+        let type = String(parts[1])
+        
+        if type == "direct" {
+            let progress = Int((Double(totalBytesSent) / Double(totalBytesExpectedToSend)) * 100)
+            
+            // Calculate speed/eta
+             queue.async {
+                guard let savedTask = PersistenceManager.shared.getTask(taskId: taskId) else { return }
+                 
+                 let startTime = savedTask.startTime ?? Date()
+                 let elapsed = Date().timeIntervalSince(startTime)
+                 var speedVal = 0.0
+                 var etaVal: Int? = nil
+                 
+                 if elapsed > 1 {
+                     speedVal = Double(totalBytesSent) / elapsed
+                     let remaining = Double(totalBytesExpectedToSend - totalBytesSent)
+                     if speedVal > 0 {
+                         etaVal = Int(remaining / speedVal)
+                     }
+                 }
+                 
+                 PersistenceManager.shared.updateTaskProgress(taskId: taskId, progress: progress, uploadedChunkIndices: [], speed: speedVal, eta: etaVal)
+                 
+                 NotificationCenter.default.post(name: NSNotification.Name("FlutoryxProgress"), object: nil, userInfo: ["taskId": taskId, "progress": progress, "status": "running", "speed": speedVal, "eta": etaVal as Any])
+                 
+                 // Throttled notification could be handled here or in PersistenceManager logic
+             }
+        }
+    }
+    
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let description = task.taskDescription else { return }
         let parts = description.split(separator: "|")
         if parts.count != 2 { return }
         
         let taskId = String(parts[0])
-        guard let chunkIndex = Int(parts[1]) else { return }
+        let identifier = String(parts[1]) // chunkIndex or "direct"
+        
+        if identifier == "direct" {
+             let tempDir = FileManager.default.temporaryDirectory
+             try? FileManager.default.removeItem(at: tempDir.appendingPathComponent("\(taskId)_body"))
+            
+             if let error = error {
+                 print("Direct upload error: \(error)")
+                 self.failTask(taskId: taskId, message: error.localizedDescription)
+                 return
+             }
+             
+             if let response = task.response as? HTTPURLResponse, (200...299).contains(response.statusCode) {
+                 self.completeTask(taskId: taskId)
+             } else {
+                 self.failTask(taskId: taskId, message: "Server Error") // Or retry?
+             }
+             return
+        }
+        
+        guard let chunkIndex = Int(identifier) else { return }
         
         // Remove temp files
         let tempDir = FileManager.default.temporaryDirectory

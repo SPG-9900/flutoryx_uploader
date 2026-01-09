@@ -9,6 +9,11 @@ enum UploadStatus: String, Codable {
     case canceled
 }
 
+enum UploadMode: String, Codable {
+    case direct
+    case chunked
+}
+
 struct UploadTask: Codable, Equatable {
     let taskId: String
     let filePath: String
@@ -27,6 +32,53 @@ struct UploadTask: Codable, Equatable {
     var startTime: Date?
     var speed: Double = 0.0
     var eta: Int?
+    
+    var uploadMode: UploadMode = .direct // Default for new tasks
+    
+    enum CodingKeys: String, CodingKey {
+        case taskId, filePath, endpoint, chunkSize, maxParallelUploads, adaptiveNetwork, showNotification, headers, data, status, progress, uploadedChunkIndices, startTime, speed, eta, uploadMode
+    }
+    
+    init(taskId: String, filePath: String, endpoint: String, chunkSize: Int, maxParallelUploads: Int, adaptiveNetwork: Bool, showNotification: Bool, headers: [String: String]?, data: [String: String]?, status: UploadStatus, progress: Int, uploadedChunkIndices: [Int], startTime: Date?, speed: Double, eta: Int?, uploadMode: UploadMode) {
+        self.taskId = taskId
+        self.filePath = filePath
+        self.endpoint = endpoint
+        self.chunkSize = chunkSize
+        self.maxParallelUploads = maxParallelUploads
+        self.adaptiveNetwork = adaptiveNetwork
+        self.showNotification = showNotification
+        self.headers = headers
+        self.data = data
+        self.status = status
+        self.progress = progress
+        self.uploadedChunkIndices = uploadedChunkIndices
+        self.startTime = startTime
+        self.speed = speed
+        self.eta = eta
+        self.uploadMode = uploadMode
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        taskId = try container.decode(String.self, forKey: .taskId)
+        filePath = try container.decode(String.self, forKey: .filePath)
+        endpoint = try container.decode(String.self, forKey: .endpoint)
+        chunkSize = try container.decode(Int.self, forKey: .chunkSize)
+        maxParallelUploads = try container.decode(Int.self, forKey: .maxParallelUploads)
+        adaptiveNetwork = try container.decode(Bool.self, forKey: .adaptiveNetwork)
+        showNotification = try container.decode(Bool.self, forKey: .showNotification)
+        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
+        data = try container.decodeIfPresent([String: String].self, forKey: .data)
+        status = try container.decode(UploadStatus.self, forKey: .status)
+        progress = try container.decode(Int.self, forKey: .progress)
+        uploadedChunkIndices = try container.decode([Int].self, forKey: .uploadedChunkIndices)
+        startTime = try container.decodeIfPresent(Date.self, forKey: .startTime)
+        speed = try container.decodeIfPresent(Double.self, forKey: .speed) ?? 0.0
+        eta = try container.decodeIfPresent(Int.self, forKey: .eta)
+        
+        // Backward compatibility: If uploadMode is missing, default to .chunked (since that was the only mode before)
+        uploadMode = try container.decodeIfPresent(UploadMode.self, forKey: .uploadMode) ?? .chunked
+    }
 }
 
 class PersistenceManager {
