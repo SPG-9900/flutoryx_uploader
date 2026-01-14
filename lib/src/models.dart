@@ -1,6 +1,18 @@
+/// Mode of upload
+enum UploadMode {
+  /// Standard multipart/form-data upload (Single request)
+  direct,
+
+  /// Chunked upload (Multiple requests)
+  chunked,
+}
+
 /// Configuration for file uploads
 class UploadConfig {
-  /// Size of each chunk in bytes (default 1MB)
+  /// Upload mode (Direct or Chunked)
+  final UploadMode uploadMode;
+
+  /// Size of each chunk in bytes (default 1MB). Only used if uploadMode is chunked.
   final int chunkSize;
 
   /// Maximum number of parallel uploads
@@ -16,6 +28,7 @@ class UploadConfig {
   final bool showNotification;
 
   const UploadConfig({
+    this.uploadMode = UploadMode.direct,
     this.chunkSize = 1024 * 1024, // 1MB
     this.maxParallelUploads = 2,
     this.adaptiveNetwork = true,
@@ -25,6 +38,7 @@ class UploadConfig {
 
   Map<String, dynamic> toMap() {
     return {
+      'uploadMode': uploadMode.toString().split('.').last,
       'chunkSize': chunkSize,
       'maxParallelUploads': maxParallelUploads,
       'adaptiveNetwork': adaptiveNetwork,

@@ -72,6 +72,7 @@ class _UploadScreenState extends State<UploadScreen> {
   final _flutoryxUploader = FlutoryxUploader();
   final List<UploadItem> _uploads = [];
   StreamSubscription? _progressSubscription;
+  bool _useChunkedUpload = false;
 
   @override
   void initState() {
@@ -150,15 +151,21 @@ class _UploadScreenState extends State<UploadScreen> {
     );
 
     if (result != null) {
+      final uploadMode = _useChunkedUpload
+          ? UploadMode.chunked
+          : UploadMode.direct;
+      final config = UploadConfig(
+        chunkSize: 512 * 1024,
+        showNotification: true,
+        uploadMode: uploadMode,
+      );
+
       if (result.paths.length == 1) {
         final file = File(result.paths.first!);
         final taskId = await _flutoryxUploader.uploadFile(
           file: file,
           endpoint: "https://httpbin.org/post", // Example endpoint
-          config: const UploadConfig(
-            chunkSize: 512 * 1024, // 512KB for test
-            showNotification: true,
-          ),
+          config: config,
           data: {"userId": "123"},
         );
 
@@ -179,7 +186,7 @@ class _UploadScreenState extends State<UploadScreen> {
         final taskIds = await _flutoryxUploader.uploadFiles(
           files: files,
           endpoint: "https://httpbin.org/post",
-          config: const UploadConfig(chunkSize: 1024 * 1024),
+          config: config,
         );
 
         setState(() {
@@ -235,6 +242,15 @@ class _UploadScreenState extends State<UploadScreen> {
       ),
       body: Column(
         children: [
+          SwitchListTile(
+            title: const Text('Use Chunked Upload'),
+            value: _useChunkedUpload,
+            onChanged: (bool value) {
+              setState(() {
+                _useChunkedUpload = value;
+              });
+            },
+          ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton.icon(

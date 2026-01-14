@@ -1,6 +1,6 @@
 name: flutoryx_uploader
 description: "A production-grade Flutter plugin for resumable, chunked, background-safe file uploads with real-time speed tracking and ETA estimation."
-version: 1.0.1
+version: 1.1.0
 homepage: https://github.com/SPG-9900/flutoryx_uploader
 
 environment:

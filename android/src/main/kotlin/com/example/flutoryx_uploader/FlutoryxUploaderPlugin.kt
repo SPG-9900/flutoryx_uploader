@@ -152,6 +152,7 @@ class FlutoryxUploaderPlugin: FlutterPlugin, MethodCallHandler, EventChannel.Str
     val maxParallelUploads = (configMap["maxParallelUploads"] as? Number)?.toInt() ?: 2
     val adaptiveNetwork = configMap["adaptiveNetwork"] as? Boolean ?: true
     val showNotification = configMap["showNotification"] as? Boolean ?: true
+    val uploadMode = configMap["uploadMode"] as? String ?: "direct" // Default to direct
     
     // retry logic extraction...
 
@@ -167,14 +168,15 @@ class FlutoryxUploaderPlugin: FlutterPlugin, MethodCallHandler, EventChannel.Str
       showNotification = showNotification,
       startTime = System.currentTimeMillis(),
       headersJson = headersJson,
-      dataJson = dataJson
+      dataJson = dataJson,
+      uploadMode = uploadMode
     )
 
     mainScope.launch {
        withContext(Dispatchers.IO) {
            db.uploadDao().insert(taskEntity)
        }
-       enqueueWork(taskId, adaptiveNetwork)
+       enqueueWork(taskId, adaptiveNetwork, uploadMode)
     }
   }
   
@@ -189,16 +191,9 @@ class FlutoryxUploaderPlugin: FlutterPlugin, MethodCallHandler, EventChannel.Str
           val taskId = UUID.randomUUID().toString()
           taskIds.add(taskId)
           
-          // Construct a modified call map for single file
-          // This is a bit hacky but avoids code duplication. 
-          // Better would be refactoring `handleUploadFile` to take arguments directly.
-          // For now, I'll just copy logic or refactor. 
-          // Let's refactor inline for speed in this context:
-          
           // Re-create arguments for this specific file
           val singleFileArgs = HashMap(call.arguments as Map<String, Any>)
           singleFileArgs["filePath"] = path
-          // Remove filePaths to avoid confusion? doesn't matter.
           
           val methodCall = MethodCall("uploadFile", singleFileArgs)
           handleUploadFile(methodCall, null, taskId)
@@ -206,7 +201,7 @@ class FlutoryxUploaderPlugin: FlutterPlugin, MethodCallHandler, EventChannel.Str
       result.success(taskIds)
   }
 
-  private fun enqueueWork(taskId: String, adaptiveNetwork: Boolean) {
+  private fun enqueueWork(taskId: String, adaptiveNetwork: Boolean, uploadMode: String) {
       val constraints = Constraints.Builder()
           .setRequiredNetworkType(NetworkType.CONNECTED)
           .build()
@@ -215,7 +210,9 @@ class FlutoryxUploaderPlugin: FlutterPlugin, MethodCallHandler, EventChannel.Str
           .putString("taskId", taskId)
           .build()
 
-      val request = OneTimeWorkRequest.Builder(UploadWorker::class.java)
+      val workerClass = if (uploadMode == "chunked") UploadWorker::class.java else DirectUploadWorker::class.java
+
+      val request = OneTimeWorkRequest.Builder(workerClass)
           .setConstraints(constraints)
           .setInputData(data)
           .addTag(taskId)
@@ -244,7 +241,7 @@ class FlutoryxUploaderPlugin: FlutterPlugin, MethodCallHandler, EventChannel.Str
             val task = db.uploadDao().getTask(taskId)
             if (task != null) {
                 db.uploadDao().updateStatus(taskId, UploadStatus.ENQUEUED.toResultString())
-                enqueueWork(taskId, task.adaptiveNetwork)
+                enqueueWork(taskId, task.adaptiveNetwork, task.uploadMode)
             }
         }
     }

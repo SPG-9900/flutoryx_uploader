@@ -23,5 +23,6 @@ data class UploadTaskEntity(
     val speed: Double = 0.0,
     val eta: Long? = null,
     val headersJson: String? = null,
-    val dataJson: String? = null
+    val dataJson: String? = null,
+    val uploadMode: String = "direct"
 )
